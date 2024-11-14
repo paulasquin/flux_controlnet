@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 import numpy as np
 import torch
-from controlnet_flux import FluxControlNetModel
+from .controlnet_flux import FluxControlNetModel
 from diffusers.image_processor import PipelineImageInput, VaeImageProcessor
 from diffusers.loaders import FluxLoraLoaderMixin
 from diffusers.models.autoencoders import AutoencoderKL
@@ -19,7 +19,7 @@ from diffusers.utils import (
     unscale_lora_layers,
 )
 from diffusers.utils.torch_utils import randn_tensor
-from transformer_flux import FluxTransformer2DModel
+from .transformer_flux import FluxTransformer2DModel
 from transformers import CLIPTextModel, CLIPTokenizer, T5EncoderModel, T5TokenizerFast
 
 if is_torch_xla_available():

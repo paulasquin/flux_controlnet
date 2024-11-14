@@ -1,4 +1,6 @@
 import torch
+import time
+from pathlib import Path
 from diffusers.utils import check_min_version, load_image
 
 from flux_controlnet.controlnet_flux import FluxControlNetModel
@@ -9,21 +11,27 @@ from flux_controlnet.transformer_flux import FluxTransformer2DModel
 
 check_min_version("0.30.2")
 
+DEVICE = (
+    "mps"
+    if torch.mps.is_available()
+    else "cuda" if torch.cuda.is_available() else "cpu"
+)
+
 
 # Build pipeline
 def build():
-    device = (
-        "mps"
-        if torch.mps.is_available()
-        else "cuda" if torch.cuda.is_available() else "cpu"
-    )
+    print("Loading models")
+    top = time.time()
     controlnet = FluxControlNetModel.from_pretrained(
-        "alimama-creative/FLUX.1-dev-Controlnet-Inpainting-Alpha",
+        # "alimama-creative/FLUX.1-dev-Controlnet-Inpainting-Alpha",
+        "alimama-creative/FLUX.1-dev-Controlnet-Inpainting-Beta",
+        device=DEVICE,
         # torch_dtype=torch.bfloat16,
     )
     transformer = FluxTransformer2DModel.from_pretrained(
         "black-forest-labs/FLUX.1-dev",
         subfolder="transformer",
+        device=DEVICE,
         # torch_dtype=torch.bfloat16,
     )
     pipe = FluxControlNetInpaintingPipeline.from_pretrained(
@@ -31,20 +39,29 @@ def build():
         controlnet=controlnet,
         transformer=transformer,
         # torch_dtype=torch.bfloat16,
-    ).to(device)
-    pipe.transformer.to(torch.bfloat16)
-    pipe.controlnet.to(torch.bfloat16)
+    ).to(DEVICE)
+    # pipe.transformer.to(torch.bfloat16)
+    # pipe.controlnet.to(torch.bfloat16)
+    print(f"models loaded in {time.time() - top:.2f}s")
     return pipe
 
 
-def run(pipe, image_path, mask_path, prompt):
+def run(
+    pipe: FluxControlNetInpaintingPipeline,
+    image_path: Path,
+    mask_path: Path,
+    prompt: str,
+):
     # Load image and mask
-    size = (768, 768)
-    image = load_image(image_path).convert("RGB").resize(size)
-    mask = load_image(mask_path).convert("RGB").resize(size)
-    generator = torch.Generator(device="cuda").manual_seed(24)
+    # size = (768, 768)
+    size = (512, 512)
+    image = load_image(str(image_path)).convert("RGB").resize(size)
+    mask = load_image(str(mask_path)).convert("RGB").resize(size)
+    generator = torch.Generator(device=DEVICE).manual_seed(24)
 
     # Inpaint
+    print("Running inpainting")
+    top = time.time()
     result = pipe(
         prompt=prompt,
         height=size[1],
@@ -58,15 +75,20 @@ def run(pipe, image_path, mask_path, prompt):
         negative_prompt="",
         true_guidance_scale=1.0,  # default: 3.5 for alpha and 1.0 for beta
     ).images[0]
+    print(f"Inpainting done in {time.time() - top:.2f}s")
     return result
 
 
 def main():
-    image_path = ("~/Documents/Workspace/Presti/Meubles-Perso/canape-1.jpg",)
-    mask_path = ("~/Documents/Workspace/Presti/Meubles-Perso/canape-1-mask-1.jpg",)
-    prompt = (
-        'a person wearing a white shoe, carrying a white bucket with text "FLUX" on it'
-    )
+    image_path = Path(
+        "~/Documents/Workspace/Presti/Meubles-Perso/canape-1.jpg"
+    ).expanduser()
+    mask_path = Path(
+        "~/Documents/Workspace/Presti/Meubles-Perso/canape-1-mask-1.jpg"
+    ).expanduser()
+    assert image_path.exists(), f"Image not found: {image_path}"
+    assert mask_path.exists(), f"Mask not found: {mask_path}"
+    prompt = "van gogh starry night painting"
     pipe = build()
 
     result = run(pipe, image_path, mask_path, prompt)
