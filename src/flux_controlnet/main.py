@@ -1,6 +1,7 @@
-import torch
 import time
 from pathlib import Path
+
+import torch
 from diffusers.utils import check_min_version, load_image
 
 from flux_controlnet.controlnet_flux import FluxControlNetModel
@@ -17,28 +18,31 @@ DEVICE = (
     else "cuda" if torch.cuda.is_available() else "cpu"
 )
 
+# TORCH_DTYPE: str = torch.bfloat16
+TORCH_DTYPE: str = torch.float16
+
 
 # Build pipeline
 def build():
     print("Loading models")
     top = time.time()
     controlnet = FluxControlNetModel.from_pretrained(
-        # "alimama-creative/FLUX.1-dev-Controlnet-Inpainting-Alpha",
-        "alimama-creative/FLUX.1-dev-Controlnet-Inpainting-Beta",
+        "alimama-creative/FLUX.1-dev-Controlnet-Inpainting-Alpha",
+        # "alimama-creative/FLUX.1-dev-Controlnet-Inpainting-Beta",
         device=DEVICE,
-        # torch_dtype=torch.bfloat16,
+        torch_dtype=TORCH_DTYPE,
     )
     transformer = FluxTransformer2DModel.from_pretrained(
         "black-forest-labs/FLUX.1-dev",
         subfolder="transformer",
         device=DEVICE,
-        # torch_dtype=torch.bfloat16,
+        torch_dtype=TORCH_DTYPE,
     )
     pipe = FluxControlNetInpaintingPipeline.from_pretrained(
         "black-forest-labs/FLUX.1-dev",
         controlnet=controlnet,
         transformer=transformer,
-        # torch_dtype=torch.bfloat16,
+        torch_dtype=TORCH_DTYPE,
     ).to(DEVICE)
     # pipe.transformer.to(torch.bfloat16)
     # pipe.controlnet.to(torch.bfloat16)
@@ -80,11 +84,9 @@ def run(
 
 
 def main():
-    image_path = Path(
-        "~/Documents/Workspace/Presti/Meubles-Perso/canape-1.jpg"
-    ).expanduser()
+    image_path = Path("/home/ubuntu/code/DATA/TestSet/1-a-astaged.png").expanduser()
     mask_path = Path(
-        "~/Documents/Workspace/Presti/Meubles-Perso/canape-1-mask-1.jpg"
+        "/home/ubuntu/code/DATA/TestSet/1-a-bmasksquare-painting.png"
     ).expanduser()
     assert image_path.exists(), f"Image not found: {image_path}"
     assert mask_path.exists(), f"Mask not found: {mask_path}"

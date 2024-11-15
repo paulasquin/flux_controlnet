@@ -20,6 +20,7 @@ from diffusers.utils import (
     scale_lora_layers,
     unscale_lora_layers,
 )
+
 from .transformer_flux import EmbedND, FluxSingleTransformerBlock, FluxTransformerBlock
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
